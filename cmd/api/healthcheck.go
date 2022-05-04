@@ -11,13 +11,15 @@ func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Reques
 	// json = fmt.Sprintf(json, app.config.env, version)
 
 	// Create a map which holds the information
-	data := map[string]string{
-		"status":      "available",
-		"environment": app.config.env,
-		"version":     version,
+	env := envelope{
+		"status": "available",
+		"system_info": map[string]string{
+			"environment": app.config.env,
+			"version":     version,
+		},
 	}
 
-	err := app.writeJSON(w, http.StatusOK, data, nil)
+	err := app.writeJSON(w, http.StatusOK, env, nil)
 	if err != nil {
 		app.logger.Println(err)
 		http.Error(
