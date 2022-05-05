@@ -6,10 +6,6 @@ import (
 
 // Handler for writing application status, operating environment and version.
 func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
-	// Create a fixed-format JSON response from a string.
-	// json := `{"status": "available", "environment": %q, "version": %q}`
-	// json = fmt.Sprintf(json, app.config.env, version)
-
 	// Create a map which holds the information
 	env := envelope{
 		"status": "available",
@@ -21,11 +17,6 @@ func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Reques
 
 	err := app.writeJSON(w, http.StatusOK, env, nil)
 	if err != nil {
-		app.logger.Println(err)
-		http.Error(
-			w,
-			"The server encountered a problem and could not process your request",
-			http.StatusInternalServerError)
-		return
+		app.serverErrorResponse(w, r, err)
 	}
 }
