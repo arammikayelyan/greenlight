@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -42,11 +40,8 @@ type application struct {
 }
 
 func main() {
-	// Declare an instance of the config struct
 	var cfg config
 
-	// Read the value of the port and env command-line flags into the config.
-	// Default port number 4000 and the environment "development"
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Environment (development|staging|production)")
 
@@ -62,11 +57,8 @@ func main() {
 
 	flag.Parse()
 
-	// Initialize a new logger which writes messages to the standard out stream,
-	// prefixed with the current date and time.
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
-	// Create the connection pool
 	db, err := openDB(cfg)
 	if err != nil {
 		logger.PrintFatal(err, nil)
@@ -74,28 +66,13 @@ func main() {
 	defer db.Close()
 	logger.PrintInfo("database connection pool established", nil)
 
-	// An instance of application struct
 	app := &application{
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
 	}
 
-	// Server
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      app.routes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-	}
-
-	// Start the HTTP server
-	logger.PrintInfo("starting %s server on %s", map[string]string{
-		"addr": srv.Addr,
-		"env":  cfg.env,
-	})
-	err = srv.ListenAndServe()
+	err = app.serve()
 	logger.PrintFatal(err, nil)
 }
 
