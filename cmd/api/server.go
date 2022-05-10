@@ -29,7 +29,7 @@ func (app *application) serve() error {
 		// Listen for incoming SIGINT and SIGTERM. Relay them to quit channel
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		s := <-quit
-		app.logger.PrintInfo("shutting down server\n\n", map[string]string{
+		app.logger.PrintInfo("shutting down server", map[string]string{
 			"signal": s.String(),
 		})
 
@@ -38,7 +38,7 @@ func (app *application) serve() error {
 		shutdownError <- srv.Shutdown(ctx)
 	}()
 
-	app.logger.PrintInfo("starting server\n\n", map[string]string{
+	app.logger.PrintInfo("starting server", map[string]string{
 		"addr": srv.Addr,
 		"env":  app.config.env,
 	})
@@ -57,7 +57,7 @@ func (app *application) serve() error {
 	}
 
 	// At this point the graceful shutdown completed successfully.
-	app.logger.PrintInfo("stopped server\n\n", map[string]string{
+	app.logger.PrintInfo("stopped server", map[string]string{
 		"addr": srv.Addr,
 	})
 
