@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"greenlight.arammikayelyan.dev/internal/data"
@@ -54,20 +53,12 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	go func() {
-		// Catch any panic and log an error message instead of terminating.
-		defer func() {
-			if err := recover(); err != nil {
-				app.logger.PrintError(fmt.Errorf("%s", err), nil)
-			}
-		}()
-
-		// Send the welcome email.
+	app.background(func() {
 		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
 		if err != nil {
 			app.logger.PrintError(err, nil)
 		}
-	}()
+	})
 
 	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
 	if err != nil {
