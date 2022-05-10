@@ -3,7 +3,6 @@ package mailer
 import (
 	"bytes"
 	"embed"
-	"fmt"
 	"text/template"
 	"time"
 
@@ -37,21 +36,18 @@ func (m Mailer) Send(recipient, templateFile string, data interface{}) error {
 	subject := new(bytes.Buffer)
 	err = tmpl.ExecuteTemplate(subject, "subject", data)
 	if err != nil {
-		print("subject body")
 		return err
 	}
 
 	plainBody := new(bytes.Buffer)
 	err = tmpl.ExecuteTemplate(plainBody, "plainBody", data)
 	if err != nil {
-		println("plain body")
 		return err
 	}
 
 	htmlBody := new(bytes.Buffer)
 	err = tmpl.ExecuteTemplate(htmlBody, "htmlBody", data)
 	if err != nil {
-		println("html body")
 		return err
 	}
 
@@ -64,7 +60,6 @@ func (m Mailer) Send(recipient, templateFile string, data interface{}) error {
 
 	err = m.dialer.DialAndSend(msg)
 	if err != nil {
-		fmt.Println("msg", msg)
 		return err
 	}
 
