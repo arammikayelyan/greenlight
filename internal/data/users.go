@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"time"
@@ -55,6 +56,40 @@ func (m UserModel) Insert(user *User) error {
 	return nil
 }
 
+func (m UserModel) Update(user *User) error {
+	query := `
+		UPDATE users
+		SET name = $1, email = $2, password_hash = $3, activated = $4, version = version + 1
+		WHERE id = $5 AND version = $6
+		RETURNING version`
+
+	args := []interface{}{
+		user.Name,
+		user.Email,
+		user.Password.hash,
+		user.Activated,
+		user.ID,
+		user.Version,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.Version)
+	if err != nil {
+		switch {
+		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
+			return ErrDuplicateEmail
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (m UserModel) GetByEmail(email string) (*User, error) {
 	query := `
 		SELECT id, created_at, name, email, password_hash, activated, version
@@ -88,38 +123,45 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 	return &user, nil
 }
 
-func (m UserModel) Update(user *User) error {
+func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error) {
+	// Calculate the SHA-256 hash of the plaintext token
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext)) // returns array
+
 	query := `
-		UPDATE users
-		SET name = $1, email = $2, password_hash = $3, activated = $4, version = version + 1
-		WHERE id = $5 AND version = $6
-		RETURNING version`
+		SELECT users.id, users.created_at, users.name, users.email, users.password_hash, users.activated, users.version
+		FROM users
+		INNER JOIN tokens
+		ON users.id = tokens.user_id
+		WHERE tokens.hash = $1
+		AND tokens.scope = $2
+		AND tokens.expiry > $3`
 
-	args := []interface{}{
-		user.Name,
-		user.Email,
-		user.Password.hash,
-		user.Activated,
-		user.ID,
-		user.Version,
-	}
+	// Get the slice of tokenHash array -- tokenHash[:] (pq driver doesn't support array)
+	args := []interface{}{tokenHash[:], tokenScope, time.Now()}
 
+	var user User
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.Version)
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(
+		&user.ID,
+		&user.CreatedAt,
+		&user.Name,
+		&user.Email,
+		&user.Password.hash,
+		&user.Activated,
+		&user.Version,
+	)
 	if err != nil {
 		switch {
-		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
-			return ErrDuplicateEmail
 		case errors.Is(err, sql.ErrNoRows):
-			return ErrEditConflict
+			return nil, ErrRecordNotFound
 		default:
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	return &user, nil
 }
 
 type password struct {
