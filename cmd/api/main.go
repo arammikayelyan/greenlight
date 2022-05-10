@@ -10,6 +10,7 @@ import (
 	_ "github.com/lib/pq"
 	"greenlight.arammikayelyan.dev/internal/data"
 	"greenlight.arammikayelyan.dev/internal/jsonlog"
+	"greenlight.arammikayelyan.dev/internal/mailer"
 )
 
 // Declare the application version number (later it'll be generated automatically)
@@ -30,6 +31,13 @@ type config struct {
 		burst   int
 		enabled bool
 	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 // Application struct to hold the dependencies
@@ -37,6 +45,7 @@ type application struct {
 	config config
 	logger *jsonlog.Logger
 	models data.Models
+	mailer mailer.Mailer
 }
 
 func main() {
@@ -55,6 +64,12 @@ func main() {
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.mailtrap.io", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 2525, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", "06e90c6e6c5280", "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", "6260507e3e79e1", "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.arammikayelyan.net>", "SMTP sender")
+
 	flag.Parse()
 
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
@@ -64,12 +79,18 @@ func main() {
 		logger.PrintFatal(err, nil)
 	}
 	defer db.Close()
-	logger.PrintInfo("database connection pool established", nil)
+	logger.PrintInfo("database connection pool established\n\n", nil)
 
 	app := &application{
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mailer.New(
+			cfg.smtp.host,
+			cfg.smtp.port,
+			cfg.smtp.username,
+			cfg.smtp.password,
+			cfg.smtp.sender),
 	}
 
 	err = app.serve()

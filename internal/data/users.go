@@ -24,11 +24,6 @@ type User struct {
 	Version   int       `json:"-"`
 }
 
-type password struct {
-	plaintext *string // for distinguishing not being presenting from empty string
-	hash      []byte
-}
-
 type UserModel struct {
 	DB *sql.DB
 }
@@ -125,6 +120,11 @@ func (m UserModel) Update(user *User) error {
 	}
 
 	return nil
+}
+
+type password struct {
+	plaintext *string // for distinguishing not being presenting from empty string
+	hash      []byte
 }
 
 // Set calculates the bcrypt hash of a plaintext password, and stores both the
