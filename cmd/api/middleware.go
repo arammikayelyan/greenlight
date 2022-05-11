@@ -91,7 +91,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Add the "Vary: Authorization" header to the response
 		w.Header().Add("Vary", "Authorization")
-		// Retrive the value of the Authorization header
+		// Retrieve the value of the Authorization header
 		authorizationHeader := r.Header.Get("Authorization")
 		// If there is no Authorization header found, use the contextSetUser() helper
 		if authorizationHeader == "" {
@@ -126,6 +126,23 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		}
 
 		r = app.contextSetUser(r, user)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Retrieve user information from the request context
+		user := app.contextGetUser(r)
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(w, r)
+			return
+		}
+		if !user.Activated {
+			app.inactiveAccountResponse(w, r)
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }
