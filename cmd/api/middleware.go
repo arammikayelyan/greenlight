@@ -2,13 +2,16 @@ package main
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/felixge/httpsnoop"
 	"golang.org/x/time/rate"
 	"greenlight.arammikayelyan.dev/internal/data"
 	"greenlight.arammikayelyan.dev/internal/validator"
@@ -174,4 +177,23 @@ func (app *application) requirePermission(code string, next http.HandlerFunc) ht
 	})
 
 	return app.requireAuthenticatedUser(fn)
+}
+
+func (app *application) metrics(next http.Handler) http.Handler {
+	totalRequestsReceived := expvar.NewInt("total_requests_received")
+	totalResponseSent := expvar.NewInt("total_response_sent")
+	totalProcessingTimeMicroseconds := expvar.NewInt("total_processing_time_seconds")
+	totalResponsesSentByStatus := expvar.NewMap("total_responses_sent_by_status")
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		totalRequestsReceived.Add(1) // increment the number of requests received
+
+		metrics := httpsnoop.CaptureMetrics(next, w, r)
+
+		totalResponseSent.Add(1) // increment the response nums on the way back up middleware chain
+
+		totalProcessingTimeMicroseconds.Add(metrics.Duration.Milliseconds())
+
+		totalResponsesSentByStatus.Add(strconv.Itoa(metrics.Code), 1)
+	})
 }
