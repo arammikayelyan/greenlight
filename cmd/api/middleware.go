@@ -4,7 +4,6 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/felixge/httpsnoop"
+	"github.com/tomasen/realip"
 	"golang.org/x/time/rate"
 	"greenlight.arammikayelyan.dev/internal/data"
 	"greenlight.arammikayelyan.dev/internal/validator"
@@ -60,12 +60,8 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if app.config.limiter.enabled {
-			// Extract the client's IP addr from the request
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				app.rateLimitExceededResponse(w, r)
-				return
-			}
+			// Get the client's real IP address
+			ip := realip.FromRequest(r)
 
 			// Lock the mutext to prevent this code being executed concurrently.
 			mu.Lock()
