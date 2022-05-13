@@ -17,10 +17,10 @@ import (
 	"greenlight.arammikayelyan.dev/internal/mailer"
 )
 
-// Declare the application version number (later it'll be generated automatically)
-const version = "1.0.0"
-
-var buildTime string
+var (
+	buildTime string
+	version   string
+)
 
 // Application configuration settings
 type config struct {
