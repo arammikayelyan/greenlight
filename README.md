@@ -20,7 +20,7 @@ Ultimately, *Greenlight* API will support the following endpoints and actions:
 | GET | /debug/vars | Display application metrics |
 
 For example,
-`
+```
 $ curl -H "Authorization: Bearer RIDBIAE3AMMK57T6IAEBUGA7ZQ" localhost:4000/v1/movies/1
 
 {
@@ -36,4 +36,4 @@ $ curl -H "Authorization: Bearer RIDBIAE3AMMK57T6IAEBUGA7ZQ" localhost:4000/v1/m
   "version": 1
   }
 }
-`
+```
