@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"expvar"
 	"flag"
+	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -18,6 +19,8 @@ import (
 
 // Declare the application version number (later it'll be generated automatically)
 const version = "1.0.0"
+
+var buildTime string
 
 // Application configuration settings
 type config struct {
@@ -74,7 +77,15 @@ func main() {
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "6260507e3e79e1", "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.arammikayelyan.net>", "SMTP sender")
 
+	displayVersion := flag.Bool("version", false, "Display version and exit")
+
 	flag.Parse()
+
+	if *displayVersion {
+		fmt.Printf("Version: \t%s\n", version)
+		fmt.Printf("Build time: \t%s\n", buildTime)
+		os.Exit(0)
+	}
 
 	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 
